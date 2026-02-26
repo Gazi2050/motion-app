@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useSpring } from "motion/react";
 import {
     Activity,
@@ -13,32 +13,53 @@ import {
     ShoppingCart
 } from "lucide-react";
 
-const integrations = [
-    { name: "Stripe", icon: CreditCard, color: "#635BFF", startX: -600, startY: -400 },
-    { name: "Shopify", icon: ShoppingCart, color: "#96BF48", startX: 700, startY: -200 },
-    { name: "PayPal", icon: Globe, color: "#003087", startX: -500, startY: 500 },
-    { name: "Adyen", icon: ShieldCheck, color: "#00FFD1", startX: 650, startY: 400 },
-    { name: "Checkout", icon: Zap, color: "#00CCFF", startX: -800, startY: 100 },
-    { name: "Braintree", icon: Settings, color: "#FFFFFF", startX: 550, startY: 600 },
-    { name: "Authorize", icon: Activity, color: "#100", startY: -650 },
-    { name: "Square", icon: Bell, color: "#3E4347", startX: -400, startY: 700 },
-    { name: "Visa", icon: Globe, color: "#1A1F71", startX: -900, startY: -100 },
-    { name: "Mastercard", icon: CreditCard, color: "#EB001B", startX: 800, startY: -500 },
+const BASE_INTEGRATIONS = [
+    { name: "Stripe", icon: CreditCard, color: "#635BFF" },
+    { name: "Shopify", icon: ShoppingCart, color: "#96BF48" },
+    { name: "PayPal", icon: Globe, color: "#003087" },
+    { name: "Adyen", icon: ShieldCheck, color: "#00FFD1" },
+    { name: "Checkout", icon: Zap, color: "#00CCFF" },
+    { name: "Braintree", icon: Settings, color: "#FFFFFF" },
+    { name: "Authorize", icon: Activity, color: "#004B8D" },
+    { name: "Square", icon: Bell, color: "#3E4347" },
+    { name: "Visa", icon: Globe, color: "#1A1F71" },
+    { name: "Mastercard", icon: CreditCard, color: "#EB001B" },
 ];
+
+type IntegrationWithPos = (typeof BASE_INTEGRATIONS)[number] & {
+    startX: number;
+    startY: number;
+};
+
+function createRandomIntegrations(): IntegrationWithPos[] {
+    return BASE_INTEGRATIONS.map((item) => ({
+        ...item,
+        startX: (Math.random() - 0.5) * 1000,
+        startY: (Math.random() - 0.5) * 800,
+    }));
+}
 
 const IntegrationsSection = () => {
     const containerRef = useRef<HTMLDivElement>(null);
+    // Same-length array every render so hook order is stable; positions filled in after mount
+    const [integrations, setIntegrations] = useState<IntegrationWithPos[]>(() =>
+        BASE_INTEGRATIONS.map((item) => ({ ...item, startX: 0, startY: 0 }))
+    );
+
     const { scrollYProgress } = useScroll({
         target: containerRef,
         offset: ["start end", "end start"],
     });
 
-    // Smooth out the scroll progress
     const smoothProgress = useSpring(scrollYProgress, {
         stiffness: 100,
         damping: 30,
         restDelta: 0.001
     });
+
+    useEffect(() => {
+        setIntegrations(createRandomIntegrations());
+    }, []);
 
     return (
         <section ref={containerRef} className="relative h-[300vh] bg-black overflow-clip">
@@ -48,7 +69,7 @@ const IntegrationsSection = () => {
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#1e293b_0%,transparent_70%)]" />
                 </div>
 
-                {/* Central Hub */}
+                {/* Central Hub - fades in as icons merge */}
                 <motion.div
                     style={{
                         scale: useTransform(smoothProgress, [0, 0.4], [0.8, 1]),
@@ -69,21 +90,28 @@ const IntegrationsSection = () => {
                     </p>
                 </motion.div>
 
-                {/* Integration Icons - Orbital Hub Layout */}
+                {/* Central single icon - appears when others merge and disappear */}
+                <motion.div
+                    style={{
+                        scale: useTransform(smoothProgress, [0.7, 0.9], [0, 1.2]),
+                        opacity: useTransform(smoothProgress, [0.7, 0.85], [0, 1]),
+                        left: "50%",
+                        top: "50%",
+                        marginLeft: "-40px",
+                        marginTop: "-40px",
+                    }}
+                    className="absolute z-30 w-20 h-20 rounded-3xl bg-blue-600 flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.5)] border border-blue-400/50"
+                >
+                    <Zap size={40} className="text-white" />
+                </motion.div>
+
+                {/* Integration Icons - random start, centralize then fade out */}
                 <div className="absolute inset-0 pointer-events-none">
-                    {integrations.map((item, index) => {
-                        const scale = useTransform(smoothProgress, [0, 0.4, 0.8, 1], [0.8, 1.2, 1, 0.5]);
-                        const opacity = useTransform(smoothProgress, [0, 0.05, 0.85, 1], [1, 1, 1, 0]);
-
-                        // Calculate orbital position
-                        const angle = (index / integrations.length) * Math.PI * 2;
-                        const radius = 280; // Hub orbital distance
-                        const targetX = Math.cos(angle) * radius;
-                        const targetY = Math.sin(angle) * radius;
-
-                        // Final transformation: Converge to orbit
-                        const x = useTransform(smoothProgress, [0, 0.8], [item.startX, targetX]);
-                        const y = useTransform(smoothProgress, [0, 0.8], [item.startY, targetY]);
+                    {integrations.map((item) => {
+                        const scale = useTransform(smoothProgress, [0.1, 0.6, 0.8, 1], [0.5, 1, 1.1, 0]);
+                        const opacity = useTransform(smoothProgress, [0, 0.2, 0.8, 0.9], [0, 1, 1, 0]);
+                        const x = useTransform(smoothProgress, [0.1, 0.8], [item.startX, 0]);
+                        const y = useTransform(smoothProgress, [0.1, 0.8], [item.startY, 0]);
 
                         return (
                             <motion.div
@@ -104,22 +132,6 @@ const IntegrationsSection = () => {
                                     size={30}
                                     style={{ color: item.color }}
                                 />
-
-                                {/* Dynamic Connectivity Lines to Center Hub */}
-                                <svg className="absolute inset-0 -z-10 w-[1200px] h-[1200px] pointer-events-none overflow-visible translate-x-1/2 translate-y-1/2 rotate-180">
-                                    <motion.path
-                                        d={`M 0,0 L ${-targetX},${-targetY}`}
-                                        stroke="white"
-                                        strokeWidth="0.5"
-                                        fill="none"
-                                        strokeDasharray="4 4"
-                                        style={{
-                                            opacity: useTransform(smoothProgress, [0.4, 0.8], [0, 0.2]),
-                                            pathLength: useTransform(smoothProgress, [0.4, 0.85], [0, 1]),
-                                        }}
-                                        className="marching-ants"
-                                    />
-                                </svg>
                             </motion.div>
                         );
                     })}
