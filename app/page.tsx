@@ -1,4 +1,5 @@
 import Image from "next/image";
+import IntegrationsSection from "@/components/landing/IntegrationsSection";
 
 export default function Home() {
   return (
@@ -19,6 +20,13 @@ export default function Home() {
           </button>
         </div>
       </main>
+
+      {/* The Scroll-Linked Section */}
+      <IntegrationsSection />
+
+      <footer className="h-40 flex items-center justify-center text-gray-500 text-sm uppercase tracking-widest font-black">
+        © 2026 Chargeflow Ecosystem — All Rights Reserved
+      </footer>
     </div>
   );
 }
